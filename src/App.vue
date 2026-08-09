@@ -382,6 +382,9 @@ onBeforeUnmount(() => {
             </a>
           </p>
           <p class="about-copy">I miss travelling in buses, ngl.</p>
+          <p class="about-copy">
+            We do not give you control of the music because neither do Indian buses.
+          </p>
         </section>
       </div>
 

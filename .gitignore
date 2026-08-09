@@ -38,6 +38,7 @@ yarn-error.log*
 /.wrangler/
 /outputs/
 /work/
+/.openai/
 
 # unused generated concept assets
 /public/character-*.png

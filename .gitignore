@@ -38,3 +38,7 @@ yarn-error.log*
 /.wrangler/
 /outputs/
 /work/
+
+# unused generated concept assets
+/public/character-*.png
+/public/indian-bus-interior.png

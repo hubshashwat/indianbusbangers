@@ -5,6 +5,7 @@ import {
   BusFront,
   ExternalLink,
   Info,
+  ListMusic,
   Pause,
   Play,
   RotateCcw,
@@ -18,6 +19,13 @@ type RideView = {
   label: string;
   src: string;
   mode: "boarding-loop" | "full-loop";
+};
+
+type SongLink = {
+  title: string;
+  film: string;
+  href: string;
+  note?: string;
 };
 
 const rideViews: RideView[] = [
@@ -35,6 +43,75 @@ const rideViews: RideView[] = [
   },
 ];
 
+const songLinks: SongLink[] = [
+  {
+    title: "Barsaat Ke Mausam Mein",
+    film: "Naajayaz",
+    href: "https://www.youtube.com/watch?v=Q_cq8__k--M",
+  },
+  {
+    title: "Tumsa Koi Pyaara",
+    film: "Khuddar",
+    href: "https://www.youtube.com/watch?v=HubRXgH0Erc",
+  },
+  {
+    title: "Tumhein Apna Banane Ki Kasam",
+    film: "Sadak",
+    href: "https://www.youtube.com/watch?v=tPNwGuu_rQ4",
+  },
+  {
+    title: "Pehli Pehli Baar Mohabbat Ki Hai",
+    film: "Sirf Tum",
+    href: "https://www.youtube.com/watch?v=cBGDDBHN22U",
+  },
+  {
+    title: "Saaton Janam Main Tere",
+    film: "Dilwale",
+    href: "https://www.youtube.com/watch?v=f0oiheLlFW4",
+  },
+  {
+    title: "Pucho Zara Pucho",
+    film: "Raja Hindustani",
+    href: "https://www.youtube.com/watch?v=E4HtYArLiwc",
+  },
+  {
+    title: "Aisi Deewangi",
+    film: "Deewana",
+    href: "https://www.youtube.com/watch?v=GwpqME_Cmpc",
+  },
+  {
+    title: "Laal Dupatta",
+    film: "Mujhse Shaadi Karogi",
+    href: "https://www.youtube.com/watch?v=1jjDs69WWUQ",
+  },
+  {
+    title: "Chori Chori Dil Tera",
+    film: "Phool Aur Angaar",
+    href: "https://www.youtube.com/watch?v=xXp7NhVKypk",
+    note: "Often confused with Phool Aur Kaante",
+  },
+  {
+    title: "Yunhi Chala Chal Rahi",
+    film: "Swades",
+    href: "https://www.youtube.com/watch?v=eEeX2QMlSlo",
+  },
+  {
+    title: "Aate Jate Khoobsurat Awara",
+    film: "Anurodh",
+    href: "https://www.youtube.com/watch?v=A0QOP_kRX6Q",
+  },
+  {
+    title: "Neele Neele Ambar Par",
+    film: "Kalaakaar",
+    href: "https://www.youtube.com/watch?v=eVnG_Rqfgg4",
+  },
+  {
+    title: "Chand Se Parda Kijiye",
+    film: "Aao Pyaar Karen",
+    href: "https://www.youtube.com/watch?v=P87IAiJmo4A",
+  },
+];
+
 const videoRef = ref<HTMLVideoElement | null>(null);
 const audioRef = ref<HTMLAudioElement | null>(null);
 const duration = ref(0);
@@ -43,6 +120,7 @@ const isStarted = ref(false);
 const isPlaying = ref(false);
 const isSwitchingView = ref(false);
 const isAboutOpen = ref(false);
+const isSongsOpen = ref(false);
 const volume = ref(78);
 const selectedViewId = ref<RideView["id"]>("boarding");
 
@@ -111,7 +189,7 @@ async function playMedia(randomizeAudio = false) {
     try {
       await playAudio(audio, randomizeAudio);
     } catch {
-      return;
+      audio.pause();
     }
   }
 
@@ -272,6 +350,10 @@ onBeforeUnmount(() => {
               <Info :size="17" />
               About
             </button>
+            <button class="view-button" type="button" @click="isSongsOpen = true">
+              <ListMusic :size="17" />
+              Songs
+            </button>
           </div>
           <button
             v-if="isStarted"
@@ -300,6 +382,32 @@ onBeforeUnmount(() => {
             </a>
           </p>
           <p class="about-copy">I miss travelling in buses, ngl.</p>
+        </section>
+      </div>
+
+      <div v-if="isSongsOpen" class="about-overlay" role="dialog" aria-modal="true" aria-labelledby="songs-title">
+        <section class="about-modal songs-modal">
+          <button class="close-button" type="button" aria-label="Close songs" @click="isSongsOpen = false">
+            <X :size="20" />
+          </button>
+          <p class="eyebrow">Playlist links</p>
+          <h2 id="songs-title">Ultimate Bus Bangers</h2>
+          <div class="song-list">
+            <a
+              v-for="song in songLinks"
+              :key="song.href"
+              class="song-link"
+              :href="song.href"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <span>
+                <strong>{{ song.title }}</strong>
+                <small>{{ song.film }}<template v-if="song.note"> · {{ song.note }}</template></small>
+              </span>
+              <ExternalLink :size="16" />
+            </a>
+          </div>
         </section>
       </div>
 

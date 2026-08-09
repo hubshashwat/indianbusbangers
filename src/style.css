@@ -100,7 +100,7 @@ button {
 
 .view-toggle {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 4px;
   padding: 4px;
 }
@@ -111,7 +111,7 @@ button {
   place-items: center;
   gap: 7px;
   min-height: 36px;
-  min-width: 118px;
+  min-width: 106px;
   border: 0;
   border-radius: 6px;
   padding: 0 12px;
@@ -148,6 +148,12 @@ button {
   box-shadow: 0 28px 90px rgba(0, 0, 0, 0.42);
 }
 
+.songs-modal {
+  width: min(620px, 100%);
+  max-height: min(680px, calc(100dvh - 36px));
+  overflow: auto;
+}
+
 .about-modal h2 {
   margin: 8px 42px 18px 0;
   font-size: clamp(1.5rem, 3vw, 2.25rem);
@@ -174,6 +180,48 @@ button {
 
 .about-copy a:hover {
   text-decoration: underline;
+}
+
+.song-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.song-link {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 56px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #fff;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.song-link:hover {
+  border-color: rgba(245, 201, 94, 0.7);
+  background: rgba(245, 201, 94, 0.12);
+}
+
+.song-link strong,
+.song-link small {
+  display: block;
+}
+
+.song-link strong {
+  font-size: 0.94rem;
+  line-height: 1.2;
+}
+
+.song-link small {
+  margin-top: 3px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.78rem;
+  line-height: 1.25;
 }
 
 .close-button {

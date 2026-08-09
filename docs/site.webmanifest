@@ -1,0 +1,16 @@
+{
+  "name": "Indian Bus Bangers",
+  "short_name": "Bus Bangers",
+  "description": "A nostalgic Indian bus ride web app with looping bus animations and classic Hindi travel-song links.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#111316",
+  "theme_color": "#111316",
+  "icons": [
+    {
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

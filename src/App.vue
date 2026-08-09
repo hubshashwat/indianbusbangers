@@ -1,6 +1,28 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from "vue";
-import { Bus, Pause, Play, RotateCcw, Volume2 } from "lucide-vue-next";
+import { computed, nextTick, onBeforeUnmount, ref } from "vue";
+import { Bus, Pause, Play, RotateCcw, SteeringWheel, UserRound, Volume2 } from "lucide-vue-next";
+
+type RideView = {
+  id: "boarding" | "driver";
+  label: string;
+  src: string;
+  mode: "boarding-loop" | "full-loop";
+};
+
+const rideViews: RideView[] = [
+  {
+    id: "boarding",
+    label: "Boarding",
+    src: "boarding-bus.mp4",
+    mode: "boarding-loop",
+  },
+  {
+    id: "driver",
+    label: "Front view",
+    src: "driver-bus.mp4",
+    mode: "full-loop",
+  },
+];
 
 const videoRef = ref<HTMLVideoElement | null>(null);
 const audioRef = ref<HTMLAudioElement | null>(null);
@@ -9,13 +31,19 @@ const isReady = ref(false);
 const isStarted = ref(false);
 const isPlaying = ref(false);
 const volume = ref(78);
+const selectedViewId = ref<RideView["id"]>("boarding");
 
 const introStart = computed(() => Math.max(duration.value - 3.5, 0));
 const loopStart = computed(() => Math.max(duration.value - 0.7, 0));
+const selectedView = computed(() => rideViews.find((view) => view.id === selectedViewId.value) ?? rideViews[0]);
 const assetBase = import.meta.env.BASE_URL;
 
 function assetUrl(path: string) {
   return `${assetBase}${path}`;
+}
+
+function setVideoStartTime(video: HTMLVideoElement) {
+  video.currentTime = selectedView.value.mode === "boarding-loop" ? introStart.value : 0;
 }
 
 function setRandomAudioTime(audio: HTMLAudioElement) {
@@ -47,9 +75,13 @@ function onVideoLoaded() {
   if (!video) return;
 
   duration.value = Number.isFinite(video.duration) ? video.duration : 0;
-  video.currentTime = introStart.value;
+  setVideoStartTime(video);
   video.muted = true;
   isReady.value = true;
+
+  if (isStarted.value && isPlaying.value) {
+    void video.play();
+  }
 }
 
 async function playMedia() {
@@ -76,7 +108,7 @@ async function startRide() {
   if (!video) return;
 
   isStarted.value = true;
-  video.currentTime = introStart.value;
+  setVideoStartTime(video);
 
   if (audio) {
     audio.loop = false;
@@ -106,11 +138,29 @@ async function togglePlayback() {
 
 function onVideoTimeUpdate() {
   const video = videoRef.value;
-  if (!video || !isStarted.value || duration.value <= 0) return;
+  if (!video || !isStarted.value || duration.value <= 0 || selectedView.value.mode !== "boarding-loop") return;
 
   if (video.currentTime >= duration.value - 0.05) {
     video.currentTime = loopStart.value;
     void video.play();
+  }
+}
+
+async function selectView(viewId: RideView["id"]) {
+  if (selectedViewId.value === viewId) return;
+
+  const wasPlaying = isPlaying.value;
+  selectedViewId.value = viewId;
+  isReady.value = false;
+  duration.value = 0;
+  await nextTick();
+
+  const video = videoRef.value;
+  if (!video) return;
+
+  video.load();
+  if (isStarted.value && wasPlaying) {
+    await video.play().catch(() => undefined);
   }
 }
 
@@ -138,8 +188,10 @@ onBeforeUnmount(() => {
     <section class="video-stage" aria-label="Bus banger video player">
       <video
         ref="videoRef"
+        :key="selectedView.id"
         class="ride-video"
-        :src="assetUrl('boarding-bus.mp4')"
+        :src="assetUrl(selectedView.src)"
+        :loop="selectedView.mode === 'full-loop'"
         playsinline
         preload="auto"
         :poster="assetUrl('bus-reference.png')"
@@ -166,15 +218,32 @@ onBeforeUnmount(() => {
             <strong>Indian Bus Bangers</strong>
           </div>
         </div>
-        <button
-          v-if="isStarted"
-          class="icon-button"
-          type="button"
-          aria-label="Restart last four seconds"
-          @click="restartRide"
-        >
-          <RotateCcw :size="19" />
-        </button>
+        <div class="top-actions">
+          <div class="view-toggle" aria-label="Bus view">
+            <button
+              v-for="view in rideViews"
+              :key="view.id"
+              class="view-button"
+              :class="{ active: selectedViewId === view.id }"
+              type="button"
+              :aria-pressed="selectedViewId === view.id"
+              @click="selectView(view.id)"
+            >
+              <UserRound v-if="view.id === 'boarding'" :size="17" />
+              <SteeringWheel v-else :size="17" />
+              {{ view.label }}
+            </button>
+          </div>
+          <button
+            v-if="isStarted"
+            class="icon-button"
+            type="button"
+            aria-label="Restart ride"
+            @click="restartRide"
+          >
+            <RotateCcw :size="19" />
+          </button>
+        </div>
       </div>
 
       <section v-if="!isStarted" class="start-panel">

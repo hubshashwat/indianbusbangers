@@ -72,7 +72,15 @@ button {
   pointer-events: none;
 }
 
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: auto;
+}
+
 .brand-lockup,
+.view-toggle,
 .start-panel,
 .player-dock {
   border: 1px solid var(--line);
@@ -88,6 +96,35 @@ button {
   gap: 12px;
   padding: 9px 12px;
   pointer-events: auto;
+}
+
+.view-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+}
+
+.view-button {
+  display: inline-grid;
+  grid-auto-flow: column;
+  place-items: center;
+  gap: 7px;
+  min-height: 36px;
+  min-width: 118px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 12px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.86rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.view-button.active {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
 }
 
 .brand-mark {
@@ -198,8 +235,28 @@ h1 {
 }
 
 @media (max-width: 760px) {
+  .top-bar {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
   .brand-lockup strong {
     max-width: 58vw;
+  }
+
+  .top-actions {
+    flex-direction: column-reverse;
+    align-items: flex-end;
+  }
+
+  .view-toggle {
+    grid-template-columns: 1fr;
+  }
+
+  .view-button {
+    min-width: 110px;
+    min-height: 34px;
+    font-size: 0.78rem;
   }
 
   .start-panel,

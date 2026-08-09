@@ -18,6 +18,30 @@ function assetUrl(path: string) {
   return `${assetBase}${path}`;
 }
 
+function setRandomAudioTime(audio: HTMLAudioElement) {
+  if (Number.isFinite(audio.duration) && audio.duration > 1) {
+    audio.currentTime = Math.random() * Math.max(audio.duration - 1, 0);
+  }
+}
+
+async function waitForAudioMetadata(audio: HTMLAudioElement) {
+  if (Number.isFinite(audio.duration) && audio.duration > 0) return;
+
+  await new Promise<void>((resolve) => {
+    const finish = () => resolve();
+    audio.addEventListener("loadedmetadata", finish, { once: true });
+    audio.addEventListener("error", finish, { once: true });
+    audio.load();
+  });
+}
+
+async function playAudioFromRandomTime(audio: HTMLAudioElement) {
+  audio.volume = volume.value / 100;
+  await waitForAudioMetadata(audio);
+  setRandomAudioTime(audio);
+  await audio.play();
+}
+
 function onVideoLoaded() {
   const video = videoRef.value;
   if (!video) return;
@@ -38,9 +62,8 @@ async function playMedia() {
 
   const audio = audioRef.value;
   if (audio) {
-    audio.volume = volume.value / 100;
     try {
-      await audio.play();
+      await playAudioFromRandomTime(audio);
     } catch {
       return;
     }
@@ -56,8 +79,7 @@ async function startRide() {
   video.currentTime = introStart.value;
 
   if (audio) {
-    audio.currentTime = 0;
-    audio.loop = true;
+    audio.loop = false;
     audio.volume = volume.value / 100;
   }
 
@@ -98,6 +120,13 @@ function onVolumeInput() {
   }
 }
 
+function onAudioEnded() {
+  const audio = audioRef.value;
+  if (!audio) return;
+
+  void playAudioFromRandomTime(audio).catch(() => undefined);
+}
+
 onBeforeUnmount(() => {
   videoRef.value?.pause();
   audioRef.value?.pause();
@@ -122,9 +151,9 @@ onBeforeUnmount(() => {
 
       <audio
         ref="audioRef"
-        :src="assetUrl('bus-banger.mp3')"
-        loop
+        :src="assetUrl('bus-bangers.mp3')"
         preload="auto"
+        @ended="onAudioEnded"
       ></audio>
 
       <div class="video-scrim"></div>
@@ -133,7 +162,7 @@ onBeforeUnmount(() => {
         <div class="brand-lockup">
           <span class="brand-mark"><Bus :size="22" /></span>
           <div>
-            <p>Bus Bangers</p>
+            <p>NOW PLAYING</p>
             <strong>Indian Bus Bangers</strong>
           </div>
         </div>

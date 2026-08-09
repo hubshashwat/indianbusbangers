@@ -293,13 +293,13 @@ onBeforeUnmount(() => {
           <p class="eyebrow">About</p>
           <h2 id="about-title">Indian Bus Bangers</h2>
           <p class="about-copy">
-            code at:
+            Github:
             <a href="https://github.com/hubshashwat/indianbusbangers" target="_blank" rel="noreferrer">
-              github.com/hubshashwat/indianbusbangers
+              github.com/hubshashwat
               <ExternalLink :size="15" />
             </a>
           </p>
-          <p class="about-copy">Made by someone who misses travelling in buses in his hometown.</p>
+          <p class="about-copy">I miss travelling in buses, ngl.</p>
         </section>
       </div>
 

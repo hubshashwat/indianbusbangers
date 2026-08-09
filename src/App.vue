@@ -374,13 +374,6 @@ onBeforeUnmount(() => {
           </button>
           <p class="eyebrow">About</p>
           <h2 id="about-title">Indian Bus Bangers</h2>
-          <p class="about-copy">
-            Github:
-            <a href="https://github.com/hubshashwat/indianbusbangers" target="_blank" rel="noreferrer">
-              github.com/hubshashwat
-              <ExternalLink :size="15" />
-            </a>
-          </p>
           <p class="about-copy">I miss travelling in buses, ngl.</p>
           <p class="about-copy">
             We do not give you control of the music because neither do Indian buses.

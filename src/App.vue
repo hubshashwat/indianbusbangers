@@ -1,379 +1,213 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from "vue";
-import {
-  Bus,
-  Headphones,
-  Music2,
-  Pause,
-  Play,
-  RotateCcw,
-  Sparkles,
-  Volume2,
-} from "lucide-vue-next";
+import { Bus, Music2, Pause, Play, RotateCcw, Volume2 } from "lucide-vue-next";
 
-type RiderId = "guy" | "girl";
-type Stage = "select" | "boarding" | "seated";
-
-type Rider = {
-  id: RiderId;
-  label: string;
-  detail: string;
-  jacket: string;
-  accent: string;
-  hair: string;
-};
-
-type Song = {
-  title: string;
-  artist: string;
-  mood: string;
-  color: string;
-  query: string;
-  beat: number[];
-};
-
-const riders: Rider[] = [
-  {
-    id: "guy",
-    label: "Guy",
-    detail: "Black jacket, main-character aisle walk",
-    jacket: "#22252d",
-    accent: "#f3b64f",
-    hair: "#141414",
-  },
-  {
-    id: "girl",
-    label: "Girl",
-    detail: "Magenta kurta, window-seat entrance",
-    jacket: "#b33a6c",
-    accent: "#38a169",
-    hair: "#151313",
-  },
-];
-
-const songs: Song[] = [
-  {
-    title: "Kala Chashma",
-    artist: "Amar Arshi, Badshah, Neha Kakkar",
-    mood: "Wedding bus",
-    color: "#f6c453",
-    query: "Kala Chashma song",
-    beat: [220, 330, 247, 392],
-  },
-  {
-    title: "Naatu Naatu",
-    artist: "Rahul Sipligunj, Kaala Bhairava",
-    mood: "Footwork mode",
-    color: "#ec5d49",
-    query: "Naatu Naatu song",
-    beat: [196, 294, 392, 294],
-  },
-  {
-    title: "Jhoome Jo Pathaan",
-    artist: "Arijit Singh, Sukriti Kakar",
-    mood: "Window swagger",
-    color: "#4fb3ff",
-    query: "Jhoome Jo Pathaan song",
-    beat: [262, 330, 392, 523],
-  },
-  {
-    title: "Chaiyya Chaiyya",
-    artist: "Sukhwinder Singh, Sapna Awasthi",
-    mood: "Classic route",
-    color: "#2fb47c",
-    query: "Chaiyya Chaiyya song",
-    beat: [196, 262, 330, 392],
-  },
-  {
-    title: "Malhari",
-    artist: "Vishal Dadlani",
-    mood: "Victory lap",
-    color: "#d8495b",
-    query: "Malhari song",
-    beat: [147, 220, 294, 349],
-  },
-  {
-    title: "Gallan Goodiyaan",
-    artist: "Yashita Sharma, Manish Kumar Tipu",
-    mood: "Group chorus",
-    color: "#f28d35",
-    query: "Gallan Goodiyaan song",
-    beat: [247, 330, 370, 494],
-  },
-];
-
-const selectedRider = ref<Rider | null>(null);
-const stage = ref<Stage>("select");
-const selectedSong = ref(songs[0]);
+const videoRef = ref<HTMLVideoElement | null>(null);
+const audioRef = ref<HTMLAudioElement | null>(null);
+const duration = ref(0);
+const isReady = ref(false);
+const isStarted = ref(false);
+const isLoopingFinalSecond = ref(false);
 const isPlaying = ref(false);
-const volume = ref(72);
-const boardingProgress = ref(0);
+const audioAvailable = ref(true);
+const volume = ref(78);
+const audioFileName = ref("bus-banger.mp3");
 
-let boardingTimer: number | undefined;
-let progressTimer: number | undefined;
-let audioContext: AudioContext | null = null;
-let beatTimer: number | undefined;
-let beatIndex = 0;
+const introStart = computed(() => Math.max(duration.value - 3.5, 0));
+const loopStart = computed(() => Math.max(duration.value - 0.7, 0));
 
-const selectedRiderClass = computed(() =>
-  selectedRider.value?.id === "girl" ? "rider-girl" : "rider-guy",
-);
+function onVideoLoaded() {
+  const video = videoRef.value;
+  if (!video) return;
 
-const riderStyle = computed(() => ({
-  "--jacket": selectedRider.value?.jacket ?? riders[0].jacket,
-  "--accent": selectedRider.value?.accent ?? riders[0].accent,
-  "--hair": selectedRider.value?.hair ?? riders[0].hair,
-}));
-
-const songLink = computed(
-  () =>
-    `https://www.youtube.com/results?search_query=${encodeURIComponent(
-      selectedSong.value.query,
-    )}`,
-);
-
-function startBoarding(rider: Rider) {
-  stopAudio();
-  selectedRider.value = rider;
-  stage.value = "boarding";
-  boardingProgress.value = 0;
-  window.clearTimeout(boardingTimer);
-  window.clearInterval(progressTimer);
-
-  progressTimer = window.setInterval(() => {
-    boardingProgress.value = Math.min(boardingProgress.value + 4, 100);
-  }, 120);
-
-  boardingTimer = window.setTimeout(() => {
-    stage.value = "seated";
-    boardingProgress.value = 100;
-    window.clearInterval(progressTimer);
-  }, 3200);
+  duration.value = Number.isFinite(video.duration) ? video.duration : 0;
+  video.currentTime = introStart.value;
+  video.muted = true;
+  isReady.value = true;
 }
 
-function resetRide() {
-  stage.value = "select";
-  selectedRider.value = null;
-  boardingProgress.value = 0;
-  stopAudio();
-}
+async function playMedia() {
+  const video = videoRef.value;
+  if (!video) return;
 
-function chooseSong(song: Song) {
-  selectedSong.value = song;
-  if (isPlaying.value) {
-    stopAudio(false);
-    startAudio();
-  }
-}
-
-function ensureAudioContext() {
-  if (!audioContext) {
-    audioContext = new AudioContext();
-  }
-
-  if (audioContext.state === "suspended") {
-    void audioContext.resume();
-  }
-}
-
-function playPulse() {
-  if (!audioContext) return;
-
-  const now = audioContext.currentTime;
-  const oscillator = audioContext.createOscillator();
-  const gain = audioContext.createGain();
-  const frequency =
-    selectedSong.value.beat[beatIndex % selectedSong.value.beat.length];
-
-  oscillator.type = beatIndex % 4 === 0 ? "sawtooth" : "triangle";
-  oscillator.frequency.setValueAtTime(frequency, now);
-  oscillator.frequency.exponentialRampToValueAtTime(frequency * 0.72, now + 0.13);
-
-  gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.exponentialRampToValueAtTime(
-    Math.max(volume.value / 450, 0.03),
-    now + 0.02,
-  );
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
-
-  oscillator.connect(gain).connect(audioContext.destination);
-  oscillator.start(now);
-  oscillator.stop(now + 0.18);
-  beatIndex += 1;
-}
-
-function startAudio() {
-  ensureAudioContext();
+  video.muted = true;
+  await video.play();
   isPlaying.value = true;
-  window.clearInterval(beatTimer);
-  playPulse();
-  beatTimer = window.setInterval(playPulse, 285);
+
+  const audio = audioRef.value;
+  if (audio && audioAvailable.value) {
+    audio.volume = volume.value / 100;
+    try {
+      await audio.play();
+    } catch {
+      audioAvailable.value = false;
+    }
+  }
 }
 
-function stopAudio(markStopped = true) {
-  window.clearInterval(beatTimer);
-  beatTimer = undefined;
-  if (markStopped) isPlaying.value = false;
+async function startRide() {
+  const video = videoRef.value;
+  const audio = audioRef.value;
+  if (!video) return;
+
+  isStarted.value = true;
+  isLoopingFinalSecond.value = false;
+  video.currentTime = introStart.value;
+
+  if (audio) {
+    audio.currentTime = 0;
+    audio.loop = true;
+    audio.volume = volume.value / 100;
+  }
+
+  await playMedia();
 }
 
-function toggleAudio() {
-  if (isPlaying.value) {
-    stopAudio();
+async function restartRide() {
+  await startRide();
+}
+
+async function togglePlayback() {
+  const video = videoRef.value;
+  const audio = audioRef.value;
+  if (!video) return;
+
+  if (video.paused) {
+    await playMedia();
   } else {
-    startAudio();
+    video.pause();
+    audio?.pause();
+    isPlaying.value = false;
+  }
+}
+
+function onVideoTimeUpdate() {
+  const video = videoRef.value;
+  if (!video || !isStarted.value || duration.value <= 0) return;
+
+  if (video.currentTime >= loopStart.value) {
+    isLoopingFinalSecond.value = true;
+  }
+
+  if (video.currentTime >= duration.value - 0.05) {
+    video.currentTime = loopStart.value;
+    void video.play();
+  }
+}
+
+function onVolumeInput() {
+  if (audioRef.value) {
+    audioRef.value.volume = volume.value / 100;
+  }
+}
+
+function onAudioError() {
+  audioAvailable.value = false;
+}
+
+function loadLocalMp3(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  const audio = audioRef.value;
+  if (!file || !audio) return;
+
+  audio.src = URL.createObjectURL(file);
+  audioFileName.value = file.name;
+  audioAvailable.value = true;
+
+  if (isStarted.value && isPlaying.value) {
+    audio.currentTime = 0;
+    audio.volume = volume.value / 100;
+    void audio.play().catch(() => {
+      audioAvailable.value = false;
+    });
   }
 }
 
 onBeforeUnmount(() => {
-  window.clearTimeout(boardingTimer);
-  window.clearInterval(progressTimer);
-  stopAudio();
-  void audioContext?.close();
+  videoRef.value?.pause();
+  audioRef.value?.pause();
 });
 </script>
 
 <template>
-  <main class="app-shell" :class="[`stage-${stage}`, selectedRiderClass]">
-    <section class="bus-stage" aria-label="Animated bus music scene">
-      <div class="reference-glow" aria-hidden="true"></div>
-      <div class="city-strip" aria-hidden="true">
-        <span v-for="index in 9" :key="index"></span>
-      </div>
+  <main class="app-shell">
+    <section class="video-stage" aria-label="Bus banger video player">
+      <video
+        ref="videoRef"
+        class="ride-video"
+        src="/boarding-bus.mp4"
+        playsinline
+        preload="auto"
+        poster="/bus-reference.png"
+        @loadedmetadata="onVideoLoaded"
+        @timeupdate="onVideoTimeUpdate"
+        @play="isPlaying = true"
+        @pause="isPlaying = false"
+      ></video>
+
+      <audio
+        ref="audioRef"
+        src="/bus-banger.mp3"
+        loop
+        preload="auto"
+        @error="onAudioError"
+      ></audio>
+
+      <div class="video-scrim"></div>
 
       <div class="top-bar">
         <div class="brand-lockup">
           <span class="brand-mark"><Bus :size="22" /></span>
           <div>
             <p>Bus Bangers</p>
-            <strong>Indian songs, full volume ride</strong>
+            <strong>Indian Bus Bangers</strong>
           </div>
         </div>
         <button
-          v-if="stage !== 'select'"
+          v-if="isStarted"
           class="icon-button"
           type="button"
-          aria-label="Start over"
-          @click="resetRide"
+          aria-label="Restart last four seconds"
+          @click="restartRide"
         >
           <RotateCcw :size="19" />
         </button>
       </div>
 
-      <div class="bus-window" aria-hidden="true">
-        <div class="rail rail-left"></div>
-        <div class="rail rail-right"></div>
-        <div class="handle-row handle-left">
-          <span v-for="index in 4" :key="`l-${index}`"></span>
-        </div>
-        <div class="handle-row handle-right">
-          <span v-for="index in 4" :key="`r-${index}`"></span>
-        </div>
-        <div class="aisle-light"></div>
-        <div class="seat-grid left">
-          <span v-for="index in 8" :key="`left-${index}`"></span>
-        </div>
-        <div class="seat-grid right">
-          <span v-for="index in 8" :key="`right-${index}`"></span>
-        </div>
-        <div class="passenger-cloud">
-          <span v-for="index in 22" :key="index"></span>
-        </div>
-        <div class="entry-doors"></div>
-        <div
-          v-if="selectedRider"
-          class="rider"
-          :class="{ walking: stage === 'boarding', seated: stage === 'seated' }"
-          :style="riderStyle"
-        >
-          <span class="head"></span>
-          <span class="hair"></span>
-          <span class="torso"></span>
-          <span class="arm arm-left"></span>
-          <span class="arm arm-right"></span>
-          <span class="leg leg-left"></span>
-          <span class="leg leg-right"></span>
-        </div>
-      </div>
+      <section v-if="!isStarted" class="start-panel">
+        <p class="eyebrow">Actual video mode</p>
+        <h1>Play the real bus animation.</h1>
+        <button class="start-button" type="button" :disabled="!isReady" @click="startRide">
+          <Play :size="22" />
+          Start ride
+        </button>
+      </section>
 
-      <div v-if="stage === 'select'" class="selection-panel">
-        <p class="eyebrow"><Sparkles :size="16" /> Route ready</p>
-        <h1>Pick your rider before the bass drops.</h1>
-        <div class="rider-options">
-          <button
-            v-for="rider in riders"
-            :key="rider.id"
-            class="rider-card"
-            type="button"
-            @click="startBoarding(rider)"
-          >
-            <span
-              class="mini-person"
-              :style="{
-                '--jacket': rider.jacket,
-                '--accent': rider.accent,
-                '--hair': rider.hair,
-              }"
-            >
-              <span></span>
-            </span>
-            <strong>{{ rider.label }}</strong>
-            <small>{{ rider.detail }}</small>
-          </button>
-        </div>
-      </div>
-
-      <div v-if="stage === 'boarding'" class="boarding-panel">
-        <p>{{ selectedRider?.label }} is boarding</p>
-        <div class="progress-track">
-          <span :style="{ width: `${boardingProgress}%` }"></span>
-        </div>
-      </div>
-
-      <section v-if="stage === 'seated'" class="music-console" aria-label="Song menu">
-        <div class="player-card" :style="{ '--song-color': selectedSong.color }">
-          <div>
-            <p class="eyebrow"><Headphones :size="16" /> Now seated</p>
-            <h2>{{ selectedSong.title }}</h2>
-            <p>{{ selectedSong.artist }}</p>
-          </div>
-          <button
-            class="play-button"
-            type="button"
-            :aria-label="isPlaying ? 'Pause preview beat' : 'Play preview beat'"
-            @click="toggleAudio"
-          >
-            <Pause v-if="isPlaying" :size="24" />
-            <Play v-else :size="24" />
-          </button>
+      <section v-else class="player-dock" aria-label="Ride controls">
+        <div>
+          <p class="eyebrow">{{ isLoopingFinalSecond ? "Looping last 0.7 seconds" : "Playing video ending" }}</p>
+          <h2>{{ audioFileName }}</h2>
         </div>
 
-        <div class="equalizer" :class="{ active: isPlaying }" aria-hidden="true">
-          <span v-for="index in 18" :key="index"></span>
-        </div>
+        <button class="play-button" type="button" :aria-label="isPlaying ? 'Pause' : 'Play'" @click="togglePlayback">
+          <Pause v-if="isPlaying" :size="24" />
+          <Play v-else :size="24" />
+        </button>
 
         <div class="volume-row">
           <Volume2 :size="18" />
-          <input v-model="volume" type="range" min="10" max="100" aria-label="Volume" />
-          <a :href="songLink" target="_blank" rel="noreferrer">Open track</a>
+          <input v-model="volume" type="range" min="0" max="100" aria-label="Volume" @input="onVolumeInput" />
+          <label class="file-pill">
+            <Music2 :size="16" />
+            MP3
+            <input type="file" accept="audio/*" @change="loadLocalMp3" />
+          </label>
         </div>
 
-        <div class="song-list">
-          <button
-            v-for="song in songs"
-            :key="song.title"
-            class="song-row"
-            :class="{ active: selectedSong.title === song.title }"
-            :style="{ '--song-color': song.color }"
-            type="button"
-            @click="chooseSong(song)"
-          >
-            <span class="song-icon"><Music2 :size="17" /></span>
-            <span>
-              <strong>{{ song.title }}</strong>
-              <small>{{ song.mood }}</small>
-            </span>
-          </button>
-        </div>
+        <p v-if="!audioAvailable" class="audio-note">
+          Add an MP3 with the picker or save it as <code>public/bus-banger.mp3</code>.
+        </p>
       </section>
     </section>
   </main>

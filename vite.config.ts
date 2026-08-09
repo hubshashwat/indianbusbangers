@@ -6,6 +6,12 @@ const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
 
 export default defineConfig({
   base: "./",
+  root: "app",
+  publicDir: "../public",
+  build: {
+    emptyOutDir: true,
+    outDir: "../dist",
+  },
   server: isCodexSeatbeltSandbox
     ? { watch: { useFsEvents: false, usePolling: true } }
     : undefined,

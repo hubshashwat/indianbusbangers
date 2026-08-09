@@ -2,12 +2,12 @@
 import { computed, nextTick, onBeforeUnmount, ref } from "vue";
 import {
   Bus,
+  BusFront,
   ExternalLink,
   Info,
   Pause,
   Play,
   RotateCcw,
-  SteeringWheel,
   UserRound,
   Volume2,
   X,
@@ -242,7 +242,7 @@ onBeforeUnmount(() => {
               @click="selectView(view.id)"
             >
               <UserRound v-if="view.id === 'boarding'" :size="17" />
-              <SteeringWheel v-else :size="17" />
+              <BusFront v-else :size="17" />
               {{ view.label }}
             </button>
             <button class="view-button" type="button" @click="isAboutOpen = true">

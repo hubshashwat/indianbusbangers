@@ -41,6 +41,7 @@ const duration = ref(0);
 const isReady = ref(false);
 const isStarted = ref(false);
 const isPlaying = ref(false);
+const isSwitchingView = ref(false);
 const isAboutOpen = ref(false);
 const volume = ref(78);
 const selectedViewId = ref<RideView["id"]>("boarding");
@@ -75,14 +76,16 @@ async function waitForAudioMetadata(audio: HTMLAudioElement) {
   });
 }
 
-async function playAudioFromRandomTime(audio: HTMLAudioElement) {
+async function playAudio(audio: HTMLAudioElement, randomizeStart = false) {
   audio.volume = volume.value / 100;
   await waitForAudioMetadata(audio);
-  setRandomAudioTime(audio);
+  if (randomizeStart) {
+    setRandomAudioTime(audio);
+  }
   await audio.play();
 }
 
-function onVideoLoaded() {
+async function onVideoLoaded() {
   const video = videoRef.value;
   if (!video) return;
 
@@ -92,26 +95,27 @@ function onVideoLoaded() {
   isReady.value = true;
 
   if (isStarted.value && isPlaying.value) {
-    void video.play();
+    await video.play().catch(() => undefined);
   }
 }
 
-async function playMedia() {
+async function playMedia(randomizeAudio = false) {
   const video = videoRef.value;
   if (!video) return;
 
   video.muted = true;
   await video.play();
-  isPlaying.value = true;
 
   const audio = audioRef.value;
   if (audio) {
     try {
-      await playAudioFromRandomTime(audio);
+      await playAudio(audio, randomizeAudio);
     } catch {
       return;
     }
   }
+
+  isPlaying.value = true;
 }
 
 async function startRide() {
@@ -127,7 +131,7 @@ async function startRide() {
     audio.volume = volume.value / 100;
   }
 
-  await playMedia();
+  await playMedia(true);
 }
 
 async function restartRide() {
@@ -140,7 +144,7 @@ async function togglePlayback() {
   if (!video) return;
 
   if (video.paused) {
-    await playMedia();
+    await playMedia(false);
   } else {
     video.pause();
     audio?.pause();
@@ -161,18 +165,37 @@ function onVideoTimeUpdate() {
 async function selectView(viewId: RideView["id"]) {
   if (selectedViewId.value === viewId) return;
 
-  const wasPlaying = isPlaying.value;
-  selectedViewId.value = viewId;
-  isReady.value = false;
-  duration.value = 0;
-  await nextTick();
+  const shouldKeepPlaying = isStarted.value && isPlaying.value;
+  isSwitchingView.value = true;
+  try {
+    selectedViewId.value = viewId;
+    isReady.value = false;
+    duration.value = 0;
+    await nextTick();
 
-  const video = videoRef.value;
-  if (!video) return;
+    const video = videoRef.value;
+    if (!video) return;
 
-  video.load();
-  if (isStarted.value && wasPlaying) {
-    await video.play().catch(() => undefined);
+    video.load();
+    if (shouldKeepPlaying) {
+      await video.play().catch(() => undefined);
+      await audioRef.value?.play().catch(() => undefined);
+      isPlaying.value = true;
+    }
+  } finally {
+    isSwitchingView.value = false;
+  }
+}
+
+function onVideoPlay() {
+  if (isStarted.value) {
+    isPlaying.value = true;
+  }
+}
+
+function onVideoPause() {
+  if (isStarted.value && !isSwitchingView.value) {
+    isPlaying.value = false;
   }
 }
 
@@ -186,7 +209,7 @@ function onAudioEnded() {
   const audio = audioRef.value;
   if (!audio) return;
 
-  void playAudioFromRandomTime(audio).catch(() => undefined);
+  void playAudio(audio, true).catch(() => undefined);
 }
 
 onBeforeUnmount(() => {
@@ -209,8 +232,8 @@ onBeforeUnmount(() => {
         :poster="assetUrl('bus-reference.png')"
         @loadedmetadata="onVideoLoaded"
         @timeupdate="onVideoTimeUpdate"
-        @play="isPlaying = true"
-        @pause="isPlaying = false"
+        @play="onVideoPlay"
+        @pause="onVideoPause"
       ></video>
 
       <audio

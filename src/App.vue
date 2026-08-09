@@ -1,6 +1,17 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref } from "vue";
-import { Bus, Pause, Play, RotateCcw, SteeringWheel, UserRound, Volume2 } from "lucide-vue-next";
+import {
+  Bus,
+  ExternalLink,
+  Info,
+  Pause,
+  Play,
+  RotateCcw,
+  SteeringWheel,
+  UserRound,
+  Volume2,
+  X,
+} from "lucide-vue-next";
 
 type RideView = {
   id: "boarding" | "driver";
@@ -30,6 +41,7 @@ const duration = ref(0);
 const isReady = ref(false);
 const isStarted = ref(false);
 const isPlaying = ref(false);
+const isAboutOpen = ref(false);
 const volume = ref(78);
 const selectedViewId = ref<RideView["id"]>("boarding");
 
@@ -233,6 +245,10 @@ onBeforeUnmount(() => {
               <SteeringWheel v-else :size="17" />
               {{ view.label }}
             </button>
+            <button class="view-button" type="button" @click="isAboutOpen = true">
+              <Info :size="17" />
+              About
+            </button>
           </div>
           <button
             v-if="isStarted"
@@ -244,6 +260,24 @@ onBeforeUnmount(() => {
             <RotateCcw :size="19" />
           </button>
         </div>
+      </div>
+
+      <div v-if="isAboutOpen" class="about-overlay" role="dialog" aria-modal="true" aria-labelledby="about-title">
+        <section class="about-modal">
+          <button class="close-button" type="button" aria-label="Close about" @click="isAboutOpen = false">
+            <X :size="20" />
+          </button>
+          <p class="eyebrow">About</p>
+          <h2 id="about-title">Indian Bus Bangers</h2>
+          <p class="about-copy">
+            code at:
+            <a href="https://github.com/hubshashwat/indianbusbangers" target="_blank" rel="noreferrer">
+              github.com/hubshashwat/indianbusbangers
+              <ExternalLink :size="15" />
+            </a>
+          </p>
+          <p class="about-copy">Made by someone who misses travelling in buses in his hometown.</p>
+        </section>
       </div>
 
       <section v-if="!isStarted" class="start-panel">

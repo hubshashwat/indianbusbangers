@@ -12,6 +12,11 @@ const volume = ref(78);
 
 const introStart = computed(() => Math.max(duration.value - 3.5, 0));
 const loopStart = computed(() => Math.max(duration.value - 0.7, 0));
+const assetBase = import.meta.env.BASE_URL;
+
+function assetUrl(path: string) {
+  return `${assetBase}${path}`;
+}
 
 function onVideoLoaded() {
   const video = videoRef.value;
@@ -105,10 +110,10 @@ onBeforeUnmount(() => {
       <video
         ref="videoRef"
         class="ride-video"
-        src="/boarding-bus.mp4"
+        :src="assetUrl('boarding-bus.mp4')"
         playsinline
         preload="auto"
-        poster="/bus-reference.png"
+        :poster="assetUrl('bus-reference.png')"
         @loadedmetadata="onVideoLoaded"
         @timeupdate="onVideoTimeUpdate"
         @play="isPlaying = true"
@@ -117,7 +122,7 @@ onBeforeUnmount(() => {
 
       <audio
         ref="audioRef"
-        src="/bus-banger.mp3"
+        :src="assetUrl('bus-banger.mp3')"
         loop
         preload="auto"
       ></audio>
